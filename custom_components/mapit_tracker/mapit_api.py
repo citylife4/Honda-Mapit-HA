@@ -113,18 +113,50 @@ class MapitAPI:
             except Exception as e:
                 _LOGGER.warning("Could not clear token cache file: %s", e)
 
+    @staticmethod
+    def _extract_error_detail(response: requests.Response) -> str:
+        """Extract a useful error message from an API response."""
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                for key in ("message", "Message", "error", "Error", "__type"):
+                    value = payload.get(key)
+                    if value:
+                        return str(value)
+                return json.dumps(payload)
+            return str(payload)
+        except ValueError:
+            return response.text.strip()
+
+    @staticmethod
+    def _is_expired_token_error(detail: str) -> bool:
+        """Check if an error detail indicates an expired token."""
+        normalized = detail.lower()
+        return (
+            "expiredtokenexception" in normalized
+            or "security token included in the request is expired" in normalized
+            or "token expired" in normalized
+            or ("token" in normalized and "expired" in normalized)
+        )
+
     def _send_request(self, url, headers, payload=None, method="POST", url_prefix="https://"):
         """Send HTTP request to API."""
         headers["content-type"] = "application/x-amz-json-1.1"
         response = requests.request(method, url_prefix + url, headers=headers, json=payload, timeout=30)
 
-        if response.status_code == 403:
-            _LOGGER.warning("Token expired, need to re-authenticate")
-            raise TokenExpiredError("Token expired")
+        detail = self._extract_error_detail(response)
+
+        if response.status_code in (401, 403):
+            if self._is_expired_token_error(detail):
+                _LOGGER.warning("Token expired, need to re-authenticate: %s", detail)
+                raise TokenExpiredError(detail or "Token expired")
+
+            _LOGGER.error("Authentication/authorization failed: %s - %s", response.status_code, detail)
+            raise RequestForbiddenError(f"Request failed with status {response.status_code}: {detail}")
 
         if response.status_code != 200:
-            _LOGGER.error("Request failed: %s - %s", response.status_code, response.text)
-            raise RequestFailedError(f"Request failed with status {response.status_code}")
+            _LOGGER.error("Request failed: %s - %s", response.status_code, detail)
+            raise RequestFailedError(f"Request failed with status {response.status_code}: {detail}")
 
         return response.json()
 
@@ -245,29 +277,36 @@ class MapitAPI:
         """Get current vehicle status."""
         response = None
         for attempt in range(2):
+            had_auth_context = all(
+                (
+                    self.id_token,
+                    self.access_key,
+                    self.secret_key,
+                    self.session_token,
+                    self.account_id,
+                )
+            )
             try:
-                if not all(
-                    (
-                        self.id_token,
-                        self.access_key,
-                        self.secret_key,
-                        self.session_token,
-                        self.account_id,
-                    )
-                ):
+                if not had_auth_context:
                     _LOGGER.debug("Missing auth context, authenticating")
                     self.authenticate()
 
                 spacename = f"/v1/accounts/{self.account_id}/summary"
                 response = self._authorized_request(spacename)
                 break
-            except TokenExpiredError:
+            except TokenExpiredError as err:
                 if attempt == 1:
-                    _LOGGER.error("Token expired after refresh retry")
+                    _LOGGER.error("Token expired after refresh retry: %s", err)
                     raise
 
                 _LOGGER.info("Token expired, clearing cached tokens and retrying auth")
                 self._reset_auth_state(clear_cache=True)
+            except RequestForbiddenError:
+                if attempt == 0 and had_auth_context:
+                    _LOGGER.info("Request forbidden with cached auth, retrying with fresh auth")
+                    self._reset_auth_state(clear_cache=True)
+                    continue
+                raise
 
         if response is None:
             raise RequestFailedError("Could not retrieve vehicle status")
@@ -304,3 +343,7 @@ class TokenExpiredError(Exception):
 
 class RequestFailedError(Exception):
     """Exception raised when API request fails."""
+
+
+class RequestForbiddenError(RequestFailedError):
+    """Exception raised when API returns 401/403 for non-expiry reasons."""
