@@ -134,6 +134,10 @@ After successful setup, you'll have these entities:
 - `sensor.motorcycle_speed` - Speed in km/h
 - `sensor.motorcycle_status` - MOVING or AT_REST
 - `sensor.motorcycle_battery` - Battery percentage
+- `sensor.motorcycle_gps_accuracy` - GPS accuracy value from Mapit API
+- `sensor.motorcycle_hdop` - HDOP compatibility sensor
+- `sensor.motorcycle_odometer` - Odometer in km (if available)
+- `sensor.motorcycle_last_coordinate_update` - Last GPS coordinate timestamp
 
 ## Adding to Dashboard
 

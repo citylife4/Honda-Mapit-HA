@@ -140,6 +140,73 @@ class MapitAPI:
             or ("token" in normalized and "expired" in normalized)
         )
 
+    @staticmethod
+    def _coerce_number(value):
+        """Convert numeric-like values to int/float when possible."""
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            try:
+                return float(stripped) if "." in stripped else int(stripped)
+            except ValueError:
+                return value
+        return value
+
+    @classmethod
+    def _find_first_key(cls, payload, keys):
+        """Find the first matching key in nested payload structures."""
+        if isinstance(payload, dict):
+            for key in keys:
+                if key in payload and payload[key] is not None:
+                    return cls._coerce_number(payload[key])
+            for nested in payload.values():
+                found = cls._find_first_key(nested, keys)
+                if found is not None:
+                    return found
+            return None
+
+        if isinstance(payload, list):
+            for item in payload:
+                found = cls._find_first_key(item, keys)
+                if found is not None:
+                    return found
+
+        return None
+
+    @classmethod
+    def _extract_gps_accuracy(cls, state):
+        """Extract GPS accuracy/HDOP from state payload variants."""
+        candidate_keys = (
+            "hdop",
+            "gpsAccuracy",
+            "gps_accuracy",
+            "accuracy",
+            "horizontalAccuracy",
+            "horizontal_accuracy",
+            "hAcc",
+        )
+
+        direct = cls._find_first_key(state, candidate_keys)
+        if direct is not None:
+            return direct
+
+        # Some payloads put telemetry in a serialized `data` field.
+        data_payload = state.get("data")
+        if isinstance(data_payload, str):
+            try:
+                data_payload = json.loads(data_payload)
+            except ValueError:
+                data_payload = None
+
+        nested = cls._find_first_key(data_payload, candidate_keys)
+        if nested is not None:
+            return nested
+
+        return None
+
     def _send_request(self, url, headers, payload=None, method="POST", url_prefix="https://"):
         """Send HTTP request to API."""
         headers["content-type"] = "application/x-amz-json-1.1"
@@ -347,6 +414,7 @@ class MapitAPI:
         # Get speed and status
         speed = state["speed"]
         status = state["status"]
+        gps_accuracy = self._extract_gps_accuracy(state)
         
         # Normalize speed: set to 0 when vehicle is at rest
         # API sometimes reports residual speed values when stopped
@@ -359,7 +427,8 @@ class MapitAPI:
             "speed": speed,
             "status": status,
             "battery": state.get("battery", 0),
-            "hdop": state.get("hdop"),
+            "hdop": gps_accuracy,
+            "gps_accuracy": gps_accuracy,
             "odometer": state.get("odometer"),
             "last_coord_ts": state.get("lastCoordTs"),
             "raw_data": response,

@@ -346,6 +346,72 @@ class Mapit:
     self.id = tokens['id']
     self.logger.debug("Tokens loaded from file successfully")
 
+  @staticmethod
+  def _coerce_number(value):
+    """Convert numeric-like values to int/float when possible."""
+    if isinstance(value, (int, float)):
+      return value
+    if isinstance(value, str):
+      stripped = value.strip()
+      if not stripped:
+        return None
+      try:
+        return float(stripped) if "." in stripped else int(stripped)
+      except ValueError:
+        return value
+    return value
+
+  @classmethod
+  def _find_first_key(cls, payload, keys):
+    """Find the first matching key in nested payload structures."""
+    if isinstance(payload, dict):
+      for key in keys:
+        if key in payload and payload[key] is not None:
+          return cls._coerce_number(payload[key])
+      for nested in payload.values():
+        found = cls._find_first_key(nested, keys)
+        if found is not None:
+          return found
+      return None
+
+    if isinstance(payload, list):
+      for item in payload:
+        found = cls._find_first_key(item, keys)
+        if found is not None:
+          return found
+
+    return None
+
+  @classmethod
+  def _extract_gps_accuracy(cls, state):
+    """Extract GPS accuracy/HDOP from state payload variants."""
+    candidate_keys = (
+      'hdop',
+      'gpsAccuracy',
+      'gps_accuracy',
+      'accuracy',
+      'horizontalAccuracy',
+      'horizontal_accuracy',
+      'hAcc'
+    )
+
+    direct = cls._find_first_key(state, candidate_keys)
+    if direct is not None:
+      return direct
+
+    data_payload = state.get('data')
+    if isinstance(data_payload, str):
+      try:
+        data_payload = json.loads(data_payload)
+      except ValueError:
+        data_payload = None
+
+    nested = cls._find_first_key(data_payload, candidate_keys)
+    if nested is not None:
+      return nested
+
+    return None
+
   
   def checkStatus(self):
     """Get current vehicle status (lng, lat, speed, status)."""
@@ -542,7 +608,7 @@ def run_checker(mapit, logger, sleep_time=1):
                     "speed": str(speed), 
                     "status": status,
                     "battery": state.get('battery'),
-                    "hdop": state.get('hdop'),
+                    "hdop": mapit._extract_gps_accuracy(state),
                     "odometer": state.get('odometer'),
                     "last_coord_ts": state.get('lastCoordTs')
                 }

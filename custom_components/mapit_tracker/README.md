@@ -8,7 +8,7 @@ Track your motorcycle's location in real-time using Home Assistant and the Mapit
 - **Speed monitoring** - Track current speed in km/h (normalized to 0 when at rest)
 - **Status detection** - Know when your motorcycle is moving or at rest
 - **Battery level** - Track motorcycle battery status
-- **HDOP monitoring** - GPS precision indicator (Horizontal Dilution of Precision)
+- **GPS accuracy monitoring** - Dedicated GPS accuracy sensor with HDOP compatibility
 - **Odometer tracking** - Monitor total distance traveled
 - **Last coordinate timestamp** - See when GPS data was last updated
 - **Device tracker** - Full integration with Home Assistant's device tracker
@@ -63,6 +63,7 @@ Once configured, the integration will create the following entities:
 - `sensor.motorcycle_speed` - Current speed in km/h (0 when at rest)
 - `sensor.motorcycle_status` - Current status (MOVING or AT_REST)
 - `sensor.motorcycle_battery` - Battery level percentage
+- `sensor.motorcycle_gps_accuracy` - GPS accuracy value from the Mapit API
 - `sensor.motorcycle_hdop` - GPS Horizontal Dilution of Precision (lower is better)
 - `sensor.motorcycle_odometer` - Total distance traveled in km (if available)
 - `sensor.motorcycle_last_coordinate_update` - Timestamp of last GPS coordinate update
