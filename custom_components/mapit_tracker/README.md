@@ -149,7 +149,7 @@ The integration polls the Mapit.me API every 30 seconds by default. This provide
 - Try removing and re-adding the integration
 
 ### Token cache
-The integration caches authentication tokens in `.mapit_tokens.json` in your Home Assistant config directory. If you experience authentication issues, try deleting this file and restarting Home Assistant.
+The integration caches authentication tokens in `.mapit_tokens.json` in your Home Assistant config directory. Expired tokens are now automatically cleared and refreshed once. If authentication still fails, delete this file and restart Home Assistant.
 
 ## Support
 

@@ -273,6 +273,8 @@ If authentication fails repeatedly:
 3. Restart Home Assistant
 4. The integration will re-authenticate
 
+Note: the integration automatically retries once by clearing expired cached tokens before this manual step is needed.
+
 ### View Logs
 
 Enable debug logging for detailed troubleshooting:

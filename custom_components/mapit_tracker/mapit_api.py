@@ -95,6 +95,24 @@ class MapitAPI:
         except Exception as e:
             _LOGGER.error("Could not save tokens to cache: %s", e)
 
+    def _reset_auth_state(self, clear_cache: bool = False):
+        """Reset in-memory auth state and optionally clear cached tokens."""
+        self.id_token = None
+        self.access_token = None
+        self.access_key = None
+        self.secret_key = None
+        self.session_token = None
+        self.identity_id = None
+        self.account_id = None
+
+        if clear_cache:
+            try:
+                if self.token_cache_file.exists():
+                    self.token_cache_file.unlink()
+                    _LOGGER.debug("Cleared token cache file")
+            except Exception as e:
+                _LOGGER.warning("Could not clear token cache file: %s", e)
+
     def _send_request(self, url, headers, payload=None, method="POST", url_prefix="https://"):
         """Send HTTP request to API."""
         headers["content-type"] = "application/x-amz-json-1.1"
@@ -225,18 +243,34 @@ class MapitAPI:
 
     def get_current_status(self):
         """Get current vehicle status."""
-        if not self.account_id:
-            _LOGGER.debug("No account ID, authenticating first")
-            self.authenticate()
+        response = None
+        for attempt in range(2):
+            try:
+                if not all(
+                    (
+                        self.id_token,
+                        self.access_key,
+                        self.secret_key,
+                        self.session_token,
+                        self.account_id,
+                    )
+                ):
+                    _LOGGER.debug("Missing auth context, authenticating")
+                    self.authenticate()
 
-        spacename = f"/v1/accounts/{self.account_id}/summary"
+                spacename = f"/v1/accounts/{self.account_id}/summary"
+                response = self._authorized_request(spacename)
+                break
+            except TokenExpiredError:
+                if attempt == 1:
+                    _LOGGER.error("Token expired after refresh retry")
+                    raise
 
-        try:
-            response = self._authorized_request(spacename)
-        except TokenExpiredError:
-            _LOGGER.info("Token expired, re-authenticating")
-            self.authenticate()
-            response = self._authorized_request(spacename)
+                _LOGGER.info("Token expired, clearing cached tokens and retrying auth")
+                self._reset_auth_state(clear_cache=True)
+
+        if response is None:
+            raise RequestFailedError("Could not retrieve vehicle status")
 
         # Extract vehicle data
         vehicle = response["vehicles"][0]
