@@ -95,7 +95,7 @@ class MapitAPI:
         except Exception as e:
             _LOGGER.error("Could not save tokens to cache: %s", e)
 
-    def _reset_auth_state(self, clear_cache: bool = False):
+    def _reset_auth_state(self, clear_cache: bool = False, keep_account_id: bool = False):
         """Reset in-memory auth state and optionally clear cached tokens."""
         self.id_token = None
         self.access_token = None
@@ -103,7 +103,8 @@ class MapitAPI:
         self.secret_key = None
         self.session_token = None
         self.identity_id = None
-        self.account_id = None
+        if not keep_account_id:
+            self.account_id = None
 
         if clear_cache:
             try:
@@ -200,11 +201,14 @@ class MapitAPI:
         self.session_token = response["Credentials"]["SessionToken"]
 
         # Step 4: Get Account ID
-        spacename = "/v1/accounts"
-        canonical_querystring = f"email={self.username.replace('@', '%40')}"
-
-        response = self._authorized_request(spacename, canonical_querystring)
-        self.account_id = response[0]["id"]
+        if self.account_id:
+            _LOGGER.debug("Using cached account ID")
+        else:
+            try:
+                self.account_id = self._resolve_account_id()
+            except (RequestForbiddenError, RequestFailedError) as err:
+                _LOGGER.error("Failed to resolve account ID: %s", err)
+                raise
 
         # Save tokens to cache
         self._save_tokens_to_cache()
@@ -273,6 +277,25 @@ class MapitAPI:
 
         return self._send_request(url, headers, method=method)
 
+    def _resolve_account_id(self) -> str:
+        """Resolve account ID from API."""
+        try:
+            response = self._authorized_request("/v1/vehicles")
+            vehicles = response.get("data", [])
+            if vehicles and isinstance(vehicles[0], dict):
+                account = vehicles[0].get("account", {})
+                if isinstance(account, dict) and account.get("id"):
+                    return account["id"]
+            _LOGGER.warning("Could not resolve account ID from /v1/vehicles response")
+        except RequestFailedError as err:
+            _LOGGER.warning("Account ID lookup via /v1/vehicles failed: %s", err)
+
+        # Legacy fallback path used by older API behavior
+        response = self._authorized_request(
+            "/v1/accounts", f"email={self.username.replace('@', '%40')}"
+        )
+        return response[0]["id"]
+
     def get_current_status(self):
         """Get current vehicle status."""
         response = None
@@ -300,11 +323,17 @@ class MapitAPI:
                     raise
 
                 _LOGGER.info("Token expired, clearing cached tokens and retrying auth")
-                self._reset_auth_state(clear_cache=True)
-            except RequestForbiddenError:
-                if attempt == 0 and had_auth_context:
-                    _LOGGER.info("Request forbidden with cached auth, retrying with fresh auth")
-                    self._reset_auth_state(clear_cache=True)
+                self._reset_auth_state(clear_cache=True, keep_account_id=bool(self.account_id))
+            except RequestForbiddenError as err:
+                if attempt == 0:
+                    err_lower = str(err).lower()
+                    drop_account_id = "not authorized to access this account summary" in err_lower
+                    keep_account_id = bool(self.account_id) and not drop_account_id
+                    if drop_account_id:
+                        _LOGGER.info("Current account ID is not authorized, retrying with account re-resolution")
+                    else:
+                        _LOGGER.info("Request forbidden, retrying with fresh auth")
+                    self._reset_auth_state(clear_cache=True, keep_account_id=keep_account_id)
                     continue
                 raise
 

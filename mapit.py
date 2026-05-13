@@ -268,10 +268,26 @@ class Mapit:
     return self.sendRequest(url, headers, method=method, payload=payload)
   
   def getId(self, account):
-    self.logger.debug("Getting ID for account: %s", account)
+    self.logger.debug("Getting account ID")
+
+    # Preferred path: derive account ID from authorized vehicle list
+    try:
+      vehicles_response = self.authorizedRequest('/v1/vehicles')
+      vehicles = vehicles_response.get('data', [])
+      if vehicles and isinstance(vehicles[0], dict):
+        account_info = vehicles[0].get('account', {})
+        account_id = account_info.get('id') if isinstance(account_info, dict) else None
+        if account_id:
+          self.id = account_id
+          return vehicles_response
+      self.logger.warning("Could not resolve account ID from /v1/vehicles response")
+    except RequestFailedException as err:
+      self.logger.warning("Account ID lookup via /v1/vehicles failed: %s", err)
+
+    # Legacy fallback path used by older API behavior
+    self.logger.debug("Falling back to /v1/accounts lookup for account ID")
     spacename = '/v1/accounts'
     canonical_querystring = 'email=' + account
-
     response = self.authorizedRequest(spacename, canonical_querystring)
     self.id = response[0]['id']
     return response
