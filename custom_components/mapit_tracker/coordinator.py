@@ -5,7 +5,7 @@ the poll refreshes vehicle detail and routes, while the socket pushes live
 position, speed and status as the vehicle moves.
 
 The websocket handling is derived from https://github.com/d3vv3/hass-honda-mapit
-(MIT, Copyright (c) 2026 db). See LICENSE for the retained notice.
+(MIT, Copyright (c) 2026 db). See NOTICE for the retained notice.
 """
 
 from __future__ import annotations

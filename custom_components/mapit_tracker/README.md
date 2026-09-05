@@ -219,4 +219,4 @@ https://github.com/citylife4/Honda-Mapit-HA/issues
 
 MIT. Parts of the API client are derived from
 [d3vv3/hass-honda-mapit](https://github.com/d3vv3/hass-honda-mapit); see the
-repository's [LICENSE](../../LICENSE) for the retained notice.
+repository's [NOTICE](../../NOTICE) for the retained notice.

@@ -111,4 +111,4 @@ Released under the MIT License - see [LICENSE](LICENSE).
 The Home Assistant integration's Cognito/SigV4 authentication, runtime config
 discovery, websocket handling and GPX export are derived from
 [d3vv3/hass-honda-mapit](https://github.com/d3vv3/hass-honda-mapit), used under
-the MIT License. The full upstream notice is retained in [LICENSE](LICENSE).
+the MIT License. The full upstream notice is retained in [NOTICE](NOTICE).

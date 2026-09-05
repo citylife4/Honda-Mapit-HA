@@ -4,7 +4,7 @@ Kept free of Home Assistant imports so the payload handling can be unit
 tested without a Home Assistant install.
 
 Derived from https://github.com/d3vv3/hass-honda-mapit (MIT, Copyright (c)
-2026 db). See LICENSE for the retained notice.
+2026 db). See NOTICE for the retained notice.
 """
 
 from __future__ import annotations

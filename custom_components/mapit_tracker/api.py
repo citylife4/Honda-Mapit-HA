@@ -6,7 +6,7 @@ credentials, and every REST call is signed with AWS Signature V4.
 
 Portions of the Cognito/SigV4 flow, the runtime config discovery and the GPX
 export are derived from https://github.com/d3vv3/hass-honda-mapit
-(MIT, Copyright (c) 2026 db). See LICENSE for the retained notice.
+(MIT, Copyright (c) 2026 db). See NOTICE for the retained notice.
 """
 
 from __future__ import annotations
