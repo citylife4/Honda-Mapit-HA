@@ -40,7 +40,7 @@ Ensure your repository meets HACS requirements:
    - Add entry:
    ```json
    {
-     "name": "citylife4/hondamapitapi"
+     "name": "citylife4/Honda-Mapit-HA"
    }
    ```
 
@@ -60,7 +60,7 @@ Users can add as custom repository while waiting for HACS approval:
 1. In Home Assistant, go to HACS
 2. Click on the 3 dots in top right corner
 3. Select "Custom repositories"
-4. Add URL: `https://github.com/citylife4/hondamapitapi`
+4. Add URL: `https://github.com/citylife4/Honda-Mapit-HA`
 5. Select category: "Integration"
 6. Click "Add"
 
@@ -111,7 +111,7 @@ Users can add as custom repository while waiting for HACS approval:
 ### Breaking Changes
 - Breaking change 1 (if any)
 
-**Full Changelog**: https://github.com/citylife4/hondamapitapi/compare/v1.0.0...v1.1.0
+**Full Changelog**: https://github.com/citylife4/Honda-Mapit-HA/compare/v1.0.0...v1.1.0
 ```
 
 ## HACS Updates
@@ -215,4 +215,4 @@ For HACS-related issues:
 - HACS Discussions: https://github.com/hacs/integration/discussions
 
 For integration issues:
-- GitHub Issues: https://github.com/citylife4/hondamapitapi/issues
+- GitHub Issues: https://github.com/citylife4/Honda-Mapit-HA/issues

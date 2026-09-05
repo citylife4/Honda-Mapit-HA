@@ -1,0 +1,5 @@
+# Dependencies for the unit tests in tests/.
+# The integration itself declares no requirements: aiohttp and voluptuous are
+# provided by Home Assistant at runtime.
+aiohttp>=3.9.0
+pytest>=8.0.0

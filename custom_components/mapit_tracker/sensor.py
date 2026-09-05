@@ -1,10 +1,9 @@
-"""Support for Mapit Motorcycle sensors."""
+"""Sensor platform for the Mapit Motorcycle Tracker integration."""
+
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
-import logging
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -13,96 +12,140 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfSpeed
+from homeassistant.const import (
+    PERCENTAGE,
+    UnitOfLength,
+    UnitOfSpeed,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import DOMAIN, MapitDataUpdateCoordinator
-
-_LOGGER = logging.getLogger(__name__)
-
-
-def _convert_timestamp(ts):
-    """Convert epoch milliseconds to UTC datetime.
-    
-    Args:
-        ts: Epoch timestamp in milliseconds
-        
-    Returns:
-        datetime object in UTC timezone, or None if conversion fails
-    """
-    if ts is None:
-        return None
-    try:
-        from datetime import timezone
-        return datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
-    except (ValueError, TypeError):
-        return None
+from .api import extract_gps_accuracy, extract_speed, ms_to_datetime
+from .const import DOMAIN
+from .coordinator import MapitDataUpdateCoordinator
+from .entity import MapitEntityDescriptionMixin, MapitVehicleEntity
 
 
-
-@dataclass(frozen=True)
-class MapitSensorEntityDescription(SensorEntityDescription):
-    """Describes Mapit sensor entity."""
-
-    value_fn: Callable[[dict], StateType] = lambda data: None
+@dataclass(frozen=True, kw_only=True)
+class MapitSensorEntityDescription(
+    SensorEntityDescription, MapitEntityDescriptionMixin
+):
+    """Describes a Mapit sensor entity."""
 
 
 SENSORS: tuple[MapitSensorEntityDescription, ...] = (
     MapitSensorEntityDescription(
         key="speed",
-        name="Speed",
+        translation_key="speed",
         native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
         device_class=SensorDeviceClass.SPEED,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:speedometer",
-        value_fn=lambda data: data.get("speed"),
+        value_fn=lambda entity: extract_speed(entity.device_state),
     ),
     MapitSensorEntityDescription(
         key="status",
-        name="Status",
+        translation_key="status",
         icon="mdi:motorbike",
-        value_fn=lambda data: data.get("status"),
+        value_fn=lambda entity: entity.device_state.get("status"),
     ),
     MapitSensorEntityDescription(
         key="battery",
-        name="Battery",
-        native_unit_of_measurement="%",
+        translation_key="battery",
+        native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data.get("battery"),
+        value_fn=lambda entity: entity.device_state.get("battery"),
     ),
     MapitSensorEntityDescription(
         key="gps_accuracy",
-        name="GPS Accuracy",
+        translation_key="gps_accuracy",
         icon="mdi:crosshairs-gps",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data.get("gps_accuracy", data.get("hdop")),
+        value_fn=lambda entity: extract_gps_accuracy(entity.device_state),
     ),
     MapitSensorEntityDescription(
         key="hdop",
-        name="HDOP",
+        translation_key="hdop",
         icon="mdi:map-marker-radius",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data.get("hdop", data.get("gps_accuracy")),
+        entity_registry_enabled_default=False,
+        value_fn=lambda entity: extract_gps_accuracy(entity.device_state),
     ),
     MapitSensorEntityDescription(
         key="odometer",
-        name="Odometer",
-        native_unit_of_measurement="km",
+        translation_key="odometer",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:counter",
-        value_fn=lambda data: data.get("odometer"),
+        value_fn=lambda entity: entity.device_state.get("odometer"),
     ),
     MapitSensorEntityDescription(
         key="last_coord_ts",
-        name="Last Coordinate Update",
+        translation_key="last_coord_ts",
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:clock-outline",
-        value_fn=lambda data: _convert_timestamp(data.get("last_coord_ts")),
+        value_fn=lambda entity: ms_to_datetime(
+            entity.device_state.get("lastCoordTs")
+        ),
+    ),
+    MapitSensorEntityDescription(
+        key="last_seen",
+        translation_key="last_seen",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:clock-check-outline",
+        value_fn=lambda entity: ms_to_datetime(entity.device_state.get("lastTs")),
+    ),
+    MapitSensorEntityDescription(
+        key="route_count",
+        translation_key="route_count",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:map-marker-path",
+        entity_registry_enabled_default=False,
+        value_fn=lambda entity: len(entity.routes),
+    ),
+    MapitSensorEntityDescription(
+        key="route_days",
+        translation_key="route_days",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:calendar-range",
+        entity_registry_enabled_default=False,
+        value_fn=lambda entity: entity.route_days(),
+    ),
+    MapitSensorEntityDescription(
+        key="last_route_started",
+        translation_key="last_route_started",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:map-marker-right",
+        entity_registry_enabled_default=False,
+        value_fn=lambda entity: entity.route_started(entity.latest_route),
+    ),
+    MapitSensorEntityDescription(
+        key="last_route_distance",
+        translation_key="last_route_distance",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:map-marker-distance",
+        entity_registry_enabled_default=False,
+        value_fn=lambda entity: entity.route_distance_km(entity.latest_route),
+        attr_fn=lambda entity: {
+            "avg_speed_kmh": (entity.latest_route or {}).get("avgSpeed"),
+            "max_speed_kmh": (entity.latest_route or {}).get("maxSpeed"),
+            "route_id": (entity.latest_route or {}).get("id"),
+        },
+    ),
+    MapitSensorEntityDescription(
+        key="last_route_duration",
+        translation_key="last_route_duration",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:timer-outline",
+        entity_registry_enabled_default=False,
+        value_fn=lambda entity: entity.route_duration_minutes(entity.latest_route),
     ),
 )
 
@@ -112,44 +155,43 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Mapit sensors from config entry."""
-    coordinator: MapitDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
-
+    """Set up the Mapit sensors from a config entry."""
+    coordinator: MapitDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id][
+        "coordinator"
+    ]
     async_add_entities(
-        MapitSensor(coordinator, config_entry, description)
+        MapitSensor(coordinator, vehicle["id"], description)
+        for vehicle in (coordinator.data or {}).get("vehicles", [])
+        if vehicle.get("id")
         for description in SENSORS
     )
 
 
-class MapitSensor(CoordinatorEntity, SensorEntity):
+class MapitSensor(MapitVehicleEntity, SensorEntity):
     """Representation of a Mapit sensor."""
 
     entity_description: MapitSensorEntityDescription
-    _attr_has_entity_name = True
 
     def __init__(
         self,
         coordinator: MapitDataUpdateCoordinator,
-        config_entry: ConfigEntry,
+        vehicle_id: str,
         description: MapitSensorEntityDescription,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, vehicle_id)
         self.entity_description = description
-        self._config_entry = config_entry
-        self._attr_unique_id = f"{config_entry.entry_id}_{description.key}"
-
-        # Device info
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, config_entry.entry_id)},
-            "name": "Motorcycle",
-            "manufacturer": "Mapit",
-            "model": "Vehicle Tracker",
-        }
+        self._attr_unique_id = f"{vehicle_id}_{description.key}"
 
     @property
-    def native_value(self) -> StateType:
+    def native_value(self) -> Any:
         """Return the state of the sensor."""
-        if self.coordinator.data:
-            return self.entity_description.value_fn(self.coordinator.data)
-        return None
+        return self.entity_description.value_fn(self)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the sensor specific state attributes."""
+        if self.entity_description.attr_fn is None:
+            return None
+        attributes = self.entity_description.attr_fn(self) or {}
+        return {key: value for key, value in attributes.items() if value is not None}

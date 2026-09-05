@@ -26,7 +26,7 @@ Your structure should look like:
           ├── config_flow.py
           ├── device_tracker.py
           ├── sensor.py
-          ├── mapit_api.py
+          ├── api.py
           └── ... (other files)
 ```
 
@@ -54,27 +54,9 @@ You'll see a form asking for:
 |-------|---------|---------------|
 | Email Address | `your.email@example.com` | Your Mapit.me login |
 | Password | `your_password` | Your Mapit.me password |
-| Identity Pool ID | `eu-west-1:abc123...` | See below ⬇️ |
-| User Pool ID | `eu-west-1_XYZ123` | See below ⬇️ |
-| User Pool Client ID | `abc123xyz...` | See below ⬇️ |
 
-### Finding AWS Configuration IDs
-
-**Method 1: From your existing setup**
-If you have `settings.py` from the standalone app:
-```python
-mappit_identityPoolId = "eu-west-1:..."      # Copy this
-mappit_userPoolId = "eu-west-1_..."          # Copy this  
-mappit_userPoolWebClientId = "..."           # Copy this
-```
-
-**Method 2: Browser inspection** (Advanced)
-1. Open https://app.mapit.me in Chrome/Firefox
-2. Press F12 for Developer Tools
-3. Go to Network tab
-4. Log in to Mapit.me
-5. Filter by "cognito"
-6. Look for these IDs in the request payloads
+That's it. The AWS Cognito pool IDs and API endpoints are discovered
+automatically from the Mapit web app, with built-in values as a fallback.
 
 ---
 
@@ -193,7 +175,7 @@ After setup, you'll have these entities:
 - ✅ Make sure IDs match your Mapit.me account
 
 ### Entities not updating
-- Wait 30 seconds for first update
+- Wait a few seconds for the first update
 - Check Settings → System → Logs for errors
 - Try removing and re-adding the integration
 
@@ -220,7 +202,7 @@ Now that you're tracking your motorcycle:
 
 - 📖 Detailed docs: `INSTALL_HOMEASSISTANT.md`
 - 🏗️ Architecture: `INTEGRATION_SUMMARY.md`  
-- 🐛 Issues: https://github.com/citylife4/hondamapitapi/issues
+- 🐛 Issues: https://github.com/citylife4/Honda-Mapit-HA/issues
 
 ---
 

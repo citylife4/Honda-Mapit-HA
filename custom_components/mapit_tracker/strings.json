@@ -3,23 +3,78 @@
     "step": {
       "user": {
         "title": "Mapit Motorcycle Tracker",
-        "description": "Configure your Mapit account to track your motorcycle",
+        "description": "Sign in with your Mapit account. The AWS Cognito settings are discovered automatically.",
         "data": {
-          "username": "Email address",
-          "password": "Password",
-          "identity_pool_id": "AWS Identity Pool ID",
-          "user_pool_id": "AWS User Pool ID",
-          "user_pool_client_id": "AWS User Pool Client ID"
+          "email": "Email address",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Mapit",
+        "description": "Your Mapit credentials are no longer valid. Enter the password again.",
+        "data": {
+          "password": "Password"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to Mapit API",
+      "cannot_connect": "Failed to connect to the Mapit API",
       "invalid_auth": "Invalid authentication credentials",
       "unknown": "Unexpected error occurred"
     },
     "abort": {
-      "already_configured": "This account is already configured"
+      "already_configured": "This account is already configured",
+      "reauth_successful": "Reauthentication was successful"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "speed": { "name": "Speed" },
+      "status": { "name": "Status" },
+      "battery": { "name": "Battery" },
+      "gps_accuracy": { "name": "GPS accuracy" },
+      "hdop": { "name": "HDOP" },
+      "odometer": { "name": "Odometer" },
+      "last_coord_ts": { "name": "Last coordinate update" },
+      "last_seen": { "name": "Last seen" },
+      "route_count": { "name": "Route count" },
+      "route_days": { "name": "Route days" },
+      "last_route_started": { "name": "Last route started" },
+      "last_route_distance": { "name": "Last route distance" },
+      "last_route_duration": { "name": "Last route duration" }
+    },
+    "binary_sensor": {
+      "moving": { "name": "Moving" }
+    }
+  },
+  "services": {
+    "get_route_detail": {
+      "name": "Get route detail",
+      "description": "Fetch a raw route payload from the Mapit API.",
+      "fields": {
+        "route_id": {
+          "name": "Route ID",
+          "description": "Identifier of the route to fetch."
+        },
+        "config_entry_id": {
+          "name": "Config entry ID",
+          "description": "Which Mapit account to query when more than one is configured."
+        }
+      }
+    },
+    "export_route_gpx": {
+      "name": "Export route GPX",
+      "description": "Convert a Mapit route into a GPX document.",
+      "fields": {
+        "route_id": {
+          "name": "Route ID",
+          "description": "Identifier of the route to export."
+        },
+        "config_entry_id": {
+          "name": "Config entry ID",
+          "description": "Which Mapit account to query when more than one is configured."
+        }
+      }
     }
   }
 }
