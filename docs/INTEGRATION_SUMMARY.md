@@ -1,5 +1,11 @@
 # Home Assistant Integration Summary
 
+> **Note:** This document describes the 1.x architecture. Version 2.0
+> replaced the synchronous `mapit_api.py` with an async client plus a
+> websocket coordinator. See
+> [the integration README](../custom_components/mapit_tracker/README.md)
+> for current behaviour.
+
 ## Overview
 
 This Home Assistant custom integration enables real-time tracking of motorcycles using the Mapit.me vehicle tracking API. The integration provides a seamless experience within Home Assistant with automatic setup, entity creation, and continuous updates.

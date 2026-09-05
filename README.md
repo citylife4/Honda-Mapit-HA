@@ -14,12 +14,13 @@ A comprehensive motorcycle tracking solution that interfaces with the Mapit.me v
 - Systemd service for background operation
 
 ### Home Assistant Integration
-- Full Home Assistant integration with device tracker
-- Real-time GPS tracking on Home Assistant maps
-- Speed, status, and battery sensors
-- Automation support for movement detection and speed alerts
-- Easy configuration through Home Assistant UI
-- Automatic token management and refresh
+- Fully async integration built on Home Assistant's shared aiohttp session
+- Live position pushed over a websocket, backed by a 10 minute REST poll
+- Email/password setup - the AWS Cognito settings are discovered automatically
+- Multiple vehicles per account, each as its own Home Assistant device
+- Speed, status, battery, GPS accuracy, odometer and route sensors
+- A `moving` binary sensor, plus route detail and GPX export services
+- Reauthentication flow and token reuse across restarts
 
 ## Quick Start
 
@@ -29,7 +30,7 @@ A comprehensive motorcycle tracking solution that interfaces with the Mapit.me v
 
 1. Add this repository as a custom repository in HACS:
    - Go to HACS → Integrations → ⋮ (menu) → Custom repositories
-   - Add URL: `https://github.com/citylife4/hondamapitapi`
+   - Add URL: `https://github.com/citylife4/Honda-Mapit-HA`
    - Category: Integration
 2. Search for "Mapit Motorcycle Tracker" in HACS
 3. Click Install
@@ -91,8 +92,23 @@ See [Home Assistant Integration README](custom_components/mapit_tracker/README.m
 - Mapit.me account and API credentials
 - Optional: Oracle Autonomous Database for data storage
 - Optional: MongoDB for additional storage
-- Optional: Home Assistant 2023.1+ for integration
+- Optional: Home Assistant 2024.8+ for the integration
+
+## Testing
+
+The integration's payload parsing is covered by unit tests that run without a
+Home Assistant install:
+
+```bash
+pip install -r requirements-test.txt
+pytest tests/
+```
 
 ## License
 
-This project is provided as-is for use with the Mapit.me vehicle tracking service.
+Released under the MIT License - see [LICENSE](LICENSE).
+
+The Home Assistant integration's Cognito/SigV4 authentication, runtime config
+discovery, websocket handling and GPX export are derived from
+[d3vv3/hass-honda-mapit](https://github.com/d3vv3/hass-honda-mapit), used under
+the MIT License. The full upstream notice is retained in [NOTICE](NOTICE).

@@ -2,7 +2,7 @@ name: Test Integration
 
 on:
   push:
-    branches: [ main, copilot/** ]
+    branches: [ main, copilot/**, claude/** ]
   pull_request:
     branches: [ main ]
 
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
     - name: Checkout code
@@ -29,7 +29,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests
+        pip install -r requirements-test.txt
 
     - name: Validate Python syntax
       run: |
@@ -42,7 +42,8 @@ jobs:
         files = [
           'custom_components/mapit_tracker/manifest.json',
           'custom_components/mapit_tracker/strings.json',
-          'custom_components/mapit_tracker/translations/en.json'
+          'custom_components/mapit_tracker/translations/en.json',
+          'hacs.json'
         ]
         for file in files:
           with open(file, 'r') as f:
@@ -50,16 +51,20 @@ jobs:
           print(f'✓ {file} is valid')
         "
 
-    - name: Test module imports
+    - name: Check strings.json and translations/en.json are in sync
       run: |
-        cd custom_components/mapit_tracker
         python -c "
-        import mapit_api
-        assert hasattr(mapit_api, 'MapitAPI')
-        assert hasattr(mapit_api, 'TokenExpiredError')
-        assert hasattr(mapit_api, 'RequestFailedError')
-        print('✓ All imports successful')
+        import json
+        with open('custom_components/mapit_tracker/strings.json') as f:
+          strings = json.load(f)
+        with open('custom_components/mapit_tracker/translations/en.json') as f:
+          english = json.load(f)
+        assert strings == english, 'strings.json and translations/en.json diverged'
+        print('✓ translations are in sync')
         "
+
+    - name: Run unit tests
+      run: pytest tests/ -v
 
     - name: Validate manifest.json structure
       run: |
@@ -67,11 +72,11 @@ jobs:
         import json
         with open('custom_components/mapit_tracker/manifest.json', 'r') as f:
           manifest = json.load(f)
-        
+
         required_fields = ['domain', 'name', 'version', 'config_flow', 'documentation', 'requirements', 'iot_class']
         for field in required_fields:
           assert field in manifest, f'Missing required field: {field}'
-        
+
         print('✓ Manifest structure is valid')
         print(f'  Domain: {manifest[\"domain\"]}')
         print(f'  Version: {manifest[\"version\"]}')

@@ -1,5 +1,11 @@
 # 🏍️ Home Assistant Integration - Implementation Complete
 
+> **Note:** This document describes the 1.x architecture. Version 2.0
+> replaced the synchronous `mapit_api.py` with an async client plus a
+> websocket coordinator. See
+> [the integration README](../custom_components/mapit_tracker/README.md)
+> for current behaviour.
+
 ## What Was Built
 
 Your motorcycle tracking app now works with Home Assistant! I've created a complete custom integration that allows you to track your motorcycle in real-time within Home Assistant.

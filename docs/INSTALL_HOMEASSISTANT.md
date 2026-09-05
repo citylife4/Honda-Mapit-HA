@@ -23,7 +23,7 @@ HACS (Home Assistant Community Store) makes installation and updates easier.
    - Click on **Integrations**
    - Click the **⋮** (three dots) in the top right corner
    - Select **Custom repositories**
-   - Add repository URL: `https://github.com/citylife4/hondamapitapi`
+   - Add repository URL: `https://github.com/citylife4/Honda-Mapit-HA`
    - Category: **Integration**
    - Click **Add**
 
@@ -61,7 +61,7 @@ config/
         ├── config_flow.py
         ├── device_tracker.py
         ├── sensor.py
-        ├── mapit_api.py
+        ├── api.py
         ├── manifest.json
         ├── strings.json
         ├── translations/
@@ -84,35 +84,19 @@ Restart Home Assistant to load the new integration:
 
 ## Configuration
 
-### Finding Your AWS Cognito Details
-
-You need these configuration values:
+### What You Need
 
 1. **Email Address** - Your Mapit.me login email
 2. **Password** - Your Mapit.me password
-3. **AWS Identity Pool ID** - Format: `eu-west-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
-4. **AWS User Pool ID** - Format: `eu-west-1_XXXXXXXXX`
-5. **AWS User Pool Client ID** - Format: `xxxxxxxxxxxxxxxxxxxxxxxxxx`
 
-#### Method A: Extract from Browser (Easiest)
+Nothing else. Since version 2.0 the integration discovers the AWS Cognito pool
+identifiers and API endpoints from the public Mapit web app when you set it up,
+falling back to built-in values if that lookup fails.
 
-1. Open your browser's Developer Tools (F12)
-2. Go to the **Network** tab
-3. Log in to https://app.mapit.me
-4. Filter network requests by "cognito"
-5. Look for requests containing these IDs in the payload or headers
+Config entries created with version 1.x are migrated automatically on upgrade:
+the pool IDs you entered by hand are retained as a fallback and only used if
+discovery fails.
 
-#### Method B: From Existing Configuration
-
-If you already have the standalone app configured:
-- Check your `settings.py` file for these values:
-  - `mappit_identityPoolId`
-  - `mappit_userPoolId`
-  - `mappit_userPoolWebClientId`
-
-#### Method C: Contact Support
-
-Reach out to Mapit.me support to request your API configuration details.
 
 ### Configuration Steps
 
@@ -266,14 +250,14 @@ automation:
 
 - Check Settings → Devices & Services → Mapit Motorcycle Tracker
 - Look for error messages
-- The integration polls every 30 seconds - be patient for updates
+- Live updates arrive over a websocket; the REST poll runs every 10 minutes
 - Check Home Assistant logs for API errors
 
 ### Token Cache Issues
 
 If authentication fails repeatedly:
 1. Go to your Home Assistant config directory
-2. Delete the file `.mapit_tokens.json`
+2. Reload the integration from Settings -> Devices & Services
 3. Restart Home Assistant
 4. The integration will re-authenticate
 
@@ -305,12 +289,12 @@ Add this to `configuration.yaml`, restart, and check the logs.
 For problems or questions:
 - Check the logs first
 - Review this guide
-- Open an issue at: https://github.com/citylife4/hondamapitapi/issues
+- Open an issue at: https://github.com/citylife4/Honda-Mapit-HA/issues
 
 ## Privacy & Security
 
 - Your credentials are stored securely in Home Assistant's config entry
-- Authentication tokens are cached in `.mapit_tokens.json` (excluded from backups)
+- The refresh token is stored in Home Assistant's `.storage` directory
 - The integration only communicates with Mapit.me servers
 - No data is sent to third parties
 

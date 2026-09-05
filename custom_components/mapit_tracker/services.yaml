@@ -1,0 +1,37 @@
+get_route_detail:
+  name: Get route detail
+  description: Fetch a raw route payload from the Mapit API.
+  fields:
+    route_id:
+      name: Route ID
+      description: Identifier of the route to fetch.
+      required: true
+      example: rt-1234567890
+      selector:
+        text:
+    config_entry_id:
+      name: Config entry ID
+      description: Which Mapit account to query when more than one is configured.
+      required: false
+      selector:
+        config_entry:
+          integration: mapit_tracker
+
+export_route_gpx:
+  name: Export route GPX
+  description: Convert a Mapit route into a GPX document.
+  fields:
+    route_id:
+      name: Route ID
+      description: Identifier of the route to export.
+      required: true
+      example: rt-1234567890
+      selector:
+        text:
+    config_entry_id:
+      name: Config entry ID
+      description: Which Mapit account to query when more than one is configured.
+      required: false
+      selector:
+        config_entry:
+          integration: mapit_tracker
